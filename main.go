@@ -7,7 +7,8 @@ import (
 	"image"
 	"image/jpeg"
 	"net/http"
-	_ "net/http/pprof"
+
+	// _ "net/http/pprof"
 	"os"
 	"os/signal"
 	"screen-share/d3d"
