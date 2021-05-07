@@ -38,8 +38,14 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<body style="margin:0">
-	<img src="/mjpeg` + strconv.Itoa(screenNo) + `" style="max-width: 100vw; max-height: 100vh;object-fit: contain;display: block;" />
+		w.Write([]byte(`<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title> Screen ` + strconv.Itoa(screenNo) + `</title>
+	</head>
+		<body style="margin:0">
+	<img src="/mjpeg` + strconv.Itoa(screenNo) + `" style="max-width: 100vw; max-height: 100vh;object-fit: contain;display: block;margin: 0 auto;" />
 </body>`))
 	})
 
@@ -47,6 +53,7 @@ func main() {
 	for i := 1; i < n; i++ {
 		fmt.Printf("Registering stream %d\n", i)
 		stream := mjpeg.NewStreamWithInterval(framerate)
+		defer stream.Close()
 		// streamDisplay(ctx, i, framerate, stream)
 		streamDisplayDXGI(ctx, i, framerate, stream)
 		http.HandleFunc(fmt.Sprintf("/mjpeg%d", i), stream.ServeHTTP)
@@ -67,10 +74,8 @@ func streamDisplay(ctx context.Context, n int, framerate time.Duration, out *mjp
 		return
 	}
 	go func() {
-		buf := bytes.NewBuffer(nil)
-		opts := &jpeg.Options{
-			Quality: 50,
-		}
+		buf := &bufferFlusher{}
+		opts := &jpeg.Options{Quality: 75}
 		ticker := time.NewTicker(framerate)
 
 		var err error
@@ -134,10 +139,8 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 		}()
 
 		const maxTimeoutMs = 150
-		buf := bytes.NewBuffer(nil)
-		opts := &jpeg.Options{
-			Quality: 50,
-		}
+		buf := &bufferFlusher{Buffer: bytes.Buffer{}}
+		opts := &jpeg.Options{Quality: 75}
 		ticker := time.NewTicker(framerate)
 
 		// Create image that can contain the wanted output (desktop)
@@ -190,3 +193,11 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 		}
 	}()
 }
+
+// Workaround for jpeg.Encode(), which requires a Flush()
+// method to not call `bufio.NewWriter`
+type bufferFlusher struct {
+	bytes.Buffer
+}
+
+func (*bufferFlusher) Flush() error { return nil }
