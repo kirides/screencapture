@@ -21,13 +21,15 @@ where `screen=N <- N` is the monitor index, starting at zero (`0`).
 By changing the lines in `main.go` regarding the streaming, you can switch between GDI `BitBlt` or `IDXGIOutputDuplication`
 
 ```go
-	framerate := time.Second / 120
-	for i := 0; i < n; i++ {
-		// ...
-		// streamDisplay(ctx, i, framerate, stream)  // <= USE GDI BitBlt
-		streamDisplayDXGI(ctx, i, framerate, stream) // <= USE IDXGIOutputDuplication
-		http.HandleFunc(fmt.Sprintf("/mjpeg%d", i), stream.ServeHTTP)
-	}
+// ...
+framerate := time.Second / 120
+for i := 0; i < n; i++ {
+    // ...
+    // streamDisplay(ctx, i, framerate, stream)  // <= USE GDI BitBlt
+    streamDisplayDXGI(ctx, i, framerate, stream) // <= USE IDXGIOutputDuplication
+    http.HandleFunc(fmt.Sprintf("/mjpeg%d", i), stream.ServeHTTP)
+}
+// ...
 ```
 
 ## Performance
