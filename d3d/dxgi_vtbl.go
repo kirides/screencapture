@@ -88,6 +88,29 @@ type iDXGIOutput1Vtbl struct {
 	DuplicateOutput          uintptr
 }
 
+type iDXGIOutput2Vtbl struct {
+	iDXGIOutput1Vtbl
+
+	SupportsOverlays uintptr
+}
+
+type iDXGIOutput3Vtbl struct {
+	iDXGIOutput2Vtbl
+
+	CheckOverlaySupport uintptr
+}
+
+type iDXGIOutput4Vtbl struct {
+	iDXGIOutput3Vtbl
+
+	CheckOverlayColorSpaceSupport uintptr
+}
+type iDXGIOutput5Vtbl struct {
+	iDXGIOutput4Vtbl
+
+	DuplicateOutput1 uintptr
+}
+
 type iDXGIOutputDuplicationVtbl struct {
 	iDXGIObjectVtbl
 

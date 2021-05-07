@@ -22,6 +22,7 @@ type OutputDuplicator struct {
 	// TODO: handle DPI? Do we need it?
 
 	acquiredFrame bool
+	needsSwizzle  bool // in case we use DuplicateOutput1, swizzle is not neccessery
 }
 
 func (dup *OutputDuplicator) initializeStage(texture *ID3D11Texture2D) int32 {
@@ -94,6 +95,7 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	}
 
 	if desc.DesktopImageInSystemMemory != 0 {
+		// TODO: Figure out WHEN exactly this cann occur, and if we can make use of it
 		dup.size = POINT{int32(desc.ModeDesc.Width), int32(desc.ModeDesc.Height)}
 		hr = dup.outputDuplication.MapDesktopSurface(&dup.mappedRect)
 		if !failed(hr) {
@@ -183,7 +185,9 @@ func (dup *OutputDuplicator) GetImage(img *image.RGBA, timeoutMs uint) error {
 
 	// using memory interpretation
 	bgra := ((*[1 << 30]byte)(unsafe.Pointer(hMem)))[:bitmapDataSize:bitmapDataSize]
-	swizzle.BGRA(bgra)
+	if dup.needsSwizzle {
+		swizzle.BGRA(bgra)
+	}
 	copy(img.Pix[:bitmapDataSize], bgra)
 
 	// manual swizzle B <-> R

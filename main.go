@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/jpeg"
 	"net/http"
+	"runtime"
 
 	// _ "net/http/pprof"
 	"os"
@@ -122,6 +123,8 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 	}
 
 	go func() {
+		// Keep this thread, so windows/d3d11/dxgi can use their threadlocal caches, if any
+		runtime.LockOSThread()
 		// Setup D3D11 stuff
 		device, deviceCtx, err := d3d.NewD3D11Device()
 		if err != nil {
