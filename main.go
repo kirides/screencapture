@@ -52,8 +52,8 @@ func main() {
 	})
 
 	framerate := time.Second / 120
-	for i := 1; i < n; i++ {
-		fmt.Printf("Registering stream %d\n", i)
+	for i := 0; i < n; i++ {
+		fmt.Fprintf(os.Stderr, "Registering stream %d\n", i)
 		stream := mjpeg.NewStreamWithInterval(framerate)
 		defer stream.Close()
 		// streamDisplay(ctx, i, framerate, stream)
