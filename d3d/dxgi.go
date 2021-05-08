@@ -413,6 +413,44 @@ type IDXGIOutputDuplication struct {
 	vtbl *iDXGIOutputDuplicationVtbl
 }
 
+func (obj *IDXGIOutputDuplication) GetFrameMoveRects(buffer []_DXGI_OUTDUPL_MOVE_RECT, rectsRequired *uint32) int32 {
+	var buf *_DXGI_OUTDUPL_MOVE_RECT
+	if len(buffer) > 0 {
+		buf = &buffer[0]
+	}
+	size := uint32(len(buffer) * 24)
+	ret, _, _ := syscall.Syscall6(
+		obj.vtbl.GetFrameMoveRects,
+		4,
+		uintptr(unsafe.Pointer(obj)),
+		uintptr(size),
+		uintptr(unsafe.Pointer(buf)),
+		uintptr(unsafe.Pointer(rectsRequired)),
+		0,
+		0,
+	)
+	*rectsRequired = *rectsRequired / 24
+	return int32(ret)
+}
+func (obj *IDXGIOutputDuplication) GetFrameDirtyRects(buffer []RECT, rectsRequired *uint32) int32 {
+	var buf *RECT
+	if len(buffer) > 0 {
+		buf = &buffer[0]
+	}
+	size := uint32(len(buffer) * 16)
+	ret, _, _ := syscall.Syscall6(
+		obj.vtbl.GetFrameDirtyRects,
+		4,
+		uintptr(unsafe.Pointer(obj)),
+		uintptr(size),
+		uintptr(unsafe.Pointer(buf)),
+		uintptr(unsafe.Pointer(rectsRequired)),
+		0,
+		0,
+	)
+	*rectsRequired = *rectsRequired / 16
+	return int32(ret)
+}
 func (obj *IDXGIOutputDuplication) GetDesc(desc *_DXGI_OUTDUPL_DESC) int32 {
 	ret, _, _ := syscall.Syscall(
 		obj.vtbl.GetDesc,

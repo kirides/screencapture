@@ -64,16 +64,12 @@ func captureScreenTranscode(ctx context.Context, n int, framerate time.Duration)
 			err = ddup.GetImage(imgBuf, 0)
 			if err != nil {
 				fmt.Printf("Err ddup.GetImage: %v\n", err)
-				// Retry with new ddup, can occur when changing resolution
-				ddup.Release()
-				ddup = nil
-				continue
+				return
 			}
 
 			numFrames++
 
 			n, err := transcoder.Write(imgBuf.Pix)
-			// n, err := f.Write(imgBuf.Pix)
 			if err != nil || n != len(imgBuf.Pix) {
 				fmt.Printf("Failed to write image: %v\n", err)
 				return
@@ -98,7 +94,7 @@ func newVideotranscoder(filePath string, width, height int, framerate float32) *
 		"-pixel_format", "rgba",
 		"-framerate", fmt.Sprintf("%f", framerate),
 		"-i", "-",
-		"-vf", "scale=-1:1080",
+		// "-vf", "scale=-1:1080",
 		"-c:v", "libx264", "-preset", "ultrafast",
 		"-crf", "26",
 		"-tune", "zerolatency",

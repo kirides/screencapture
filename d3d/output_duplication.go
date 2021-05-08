@@ -18,9 +18,9 @@ type OutputDuplicator struct {
 	mappedRect DXGI_MAPPED_RECT
 	size       POINT
 
-	// TODO: gther info about update regions and only update those
 	// TODO: handle DPI? Do we need it?
-
+	dirtyRects    []RECT
+	movedRects    []_DXGI_OUTDUPL_MOVE_RECT
 	acquiredFrame bool
 	needsSwizzle  bool // in case we use DuplicateOutput1, swizzle is not neccessery
 }
@@ -136,20 +136,63 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 		}
 	}
 
-	// TODO: Optimize by only using dirty rects and CopySubresourceRegion2D
+	// NOTE: we could use a single, large []byte buffer and use it as storage for moved rects & dirty rects
+	if frameInfo.TotalMetadataBufferSize > 0 {
+		// Handling moved / dirty rects, to reduce GPU<->CPU memory copying
+		moveRectsRequired := uint32(1)
+		for {
+			if len(dup.movedRects) < int(moveRectsRequired) {
+				dup.movedRects = make([]_DXGI_OUTDUPL_MOVE_RECT, moveRectsRequired)
+			}
+			hr = dup.outputDuplication.GetFrameMoveRects(dup.movedRects, &moveRectsRequired)
+			if failed(hr) {
+				if HRESULT(hr) == DXGI_ERROR_MORE_DATA {
+					continue
+				}
+				return nil, nil, nil, fmt.Errorf("failed to GetFrameMoveRects. %w", HRESULT(hr))
+			}
+			dup.movedRects = dup.movedRects[:moveRectsRequired]
+			break
+		}
 
-	// box := _D3D11_BOX{
-	// 	Left:   0,
-	// 	Top:    0,
-	// 	Right:  desc.ModeDesc.Width,
-	// 	Bottom: desc.ModeDesc.Height,
-	// 	Front:  0,
-	// 	Back:   1,
-	// }
+		dirtyRectsRequired := uint32(1)
+		for {
+			if len(dup.dirtyRects) < int(dirtyRectsRequired) {
+				dup.dirtyRects = make([]RECT, dirtyRectsRequired)
+			}
+			hr = dup.outputDuplication.GetFrameDirtyRects(dup.dirtyRects, &dirtyRectsRequired)
+			if failed(hr) {
+				if HRESULT(hr) == DXGI_ERROR_MORE_DATA {
+					continue
+				}
+				return nil, nil, nil, fmt.Errorf("failed to GetFrameDirtyRects. %w", HRESULT(hr))
+			}
+			dup.dirtyRects = dup.dirtyRects[:dirtyRectsRequired]
+			break
+		}
 
-	// dup.deviceCtx.CopySubresourceRegion2D(dup.stage_, 0, 0, 0, 0, desktop2d, 0, &box)
+		box := _D3D11_BOX{
+			Front: 0,
+			Back:  1,
+		}
+		if len(dup.movedRects) == 0 {
+			for i := 0; i < len(dup.dirtyRects); i++ {
+				box.Left = uint32(dup.dirtyRects[i].Left)
+				box.Top = uint32(dup.dirtyRects[i].Top)
+				box.Right = uint32(dup.dirtyRects[i].Right)
+				box.Bottom = uint32(dup.dirtyRects[i].Bottom)
 
-	dup.deviceCtx.CopyResource2D(dup.stagedTex, desktop2d)
+				dup.deviceCtx.CopySubresourceRegion2D(dup.stagedTex, 0, box.Left, box.Top, 0, desktop2d, 0, &box)
+			}
+		} else {
+			// TODO: handle moved rects, then dirty rects
+			// for now, just update the whole image instead
+			dup.deviceCtx.CopyResource2D(dup.stagedTex, desktop2d)
+		}
+	} else {
+		// no frame metadata, copy whole image
+		dup.deviceCtx.CopyResource2D(dup.stagedTex, desktop2d)
+	}
 
 	hr = dup.surface.Map(&dup.mappedRect, DXGI_MAP_READ)
 	if failed(hr) {
@@ -157,15 +200,6 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	}
 	return dup.surface.Unmap, &dup.mappedRect, &dup.size, nil
 }
-
-// func byteSliceFromUintptr(v uintptr, len int) []byte {
-// 	res := []byte{}
-// 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&res))
-// 	hdr.Data = v
-// 	hdr.Cap = len
-// 	hdr.Len = len
-// 	return res
-// }
 
 func (dup *OutputDuplicator) GetImage(img *image.RGBA, timeoutMs uint) error {
 	unmap, mappedRect, size, err := dup.Snapshot(timeoutMs)
@@ -179,15 +213,13 @@ func (dup *OutputDuplicator) GetImage(img *image.RGBA, timeoutMs uint) error {
 	hMem := mappedRect.PBits
 
 	bitmapDataSize := int32(((int64(size.X)*32 + 31) / 32) * 4 * int64(size.Y))
-	// using slice header tricks
-	// bgra := byteSliceFromUintptr(hMem, int(bitmapDataSize))
 
-	// using memory interpretation
-	bgra := ((*[1 << 30]byte)(unsafe.Pointer(hMem)))[:bitmapDataSize:bitmapDataSize]
+	// copy source bytes into image.RGBA.Pix using memory interpretation
+	imageBytes := ((*[1 << 30]byte)(unsafe.Pointer(hMem)))[:bitmapDataSize:bitmapDataSize]
+	copy(img.Pix[:bitmapDataSize], imageBytes)
 	if dup.needsSwizzle {
-		swizzle.BGRA(bgra)
+		swizzle.BGRA(img.Pix)
 	}
-	copy(img.Pix[:bitmapDataSize], bgra)
 
 	// manual swizzle B <-> R
 

@@ -28,6 +28,14 @@ type POINT struct {
 	X int32
 	Y int32
 }
+type RECT struct {
+	Left, Top, Right, Bottom int32
+}
+
+type _DXGI_OUTDUPL_MOVE_RECT struct {
+	Src  POINT
+	Dest RECT
+}
 type _DXGI_OUTDUPL_POINTER_POSITION struct {
 	Position POINT
 	Visible  uint32
