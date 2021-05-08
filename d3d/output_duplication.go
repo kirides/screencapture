@@ -95,7 +95,7 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	}
 
 	if desc.DesktopImageInSystemMemory != 0 {
-		// TODO: Figure out WHEN exactly this cann occur, and if we can make use of it
+		// TODO: Figure out WHEN exactly this can occur, and if we can make use of it
 		dup.size = POINT{int32(desc.ModeDesc.Width), int32(desc.ModeDesc.Height)}
 		hr = dup.outputDuplication.MapDesktopSurface(&dup.mappedRect)
 		if !failed(hr) {
@@ -105,7 +105,8 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 
 	var desktop *IDXGIResource
 	var frameInfo _DXGI_OUTDUPL_FRAME_INFO
-	// for {
+
+	// Release a possible previous frame
 	dup.ReleaseFrame()
 	hrF := dup.outputDuplication.AcquireNextFrame(timeoutMs, &frameInfo, &desktop)
 	if failed(int32(hrF)) {
@@ -115,20 +116,18 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 		}
 		return nil, nil, nil, fmt.Errorf("failed to AcquireNextFrame. %w", _DXGI_ERROR(hrF))
 	}
+	defer desktop.Release()
 	dup.acquiredFrame = true
 	if frameInfo.AccumulatedFrames == 0 {
-		desktop.Release()
 		return nil, nil, nil, errNoImageYet
 	}
 
-	// }
-
 	var desktop2d *ID3D11Texture2D
 	hr = desktop.QueryInterface(iid_ID3D11Texture2D, &desktop2d)
-	desktop.Release()
 	if failed(hr) {
 		return nil, nil, nil, fmt.Errorf("failed to QueryInterface(iid_ID3D11Texture2D, ...). %w", _DXGI_ERROR(hr))
 	}
+	defer desktop2d.Release()
 
 	if dup.stagedTex == nil {
 		hr = dup.initializeStage(desktop2d)
