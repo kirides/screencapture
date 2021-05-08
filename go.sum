@@ -9,5 +9,6 @@ github.com/lxn/win v0.0.0-20210218163916-a377121e959e/go.mod h1:KxxjdtRkfNoYDCUP
 github.com/mattn/go-mjpeg v0.0.1 h1:PunfTzQvXkULfur7ALrU8EeMWM4kknyJT7zI1DUoNIQ=
 github.com/mattn/go-mjpeg v0.0.1/go.mod h1:m4++VtXCgYJxuZeEUF3WydpJk+0yKO50el52Ww5xBvo=
 gocv.io/x/gocv v0.24.0/go.mod h1:Rar2PS6DV+T4FL+PM535EImD/h13hGVaHhnCu1xarBs=
-golang.org/x/sys v0.0.0-20201018230417-eeed37f84f13 h1:5jaG59Zhd+8ZXe8C+lgiAGqkOaZBruqrWclLkgAww34=
 golang.org/x/sys v0.0.0-20201018230417-eeed37f84f13/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20210507161434-a76c4d0a0096 h1:5PbJGn5Sp3GEUjJ61aYbUP6RIo3Z3r2E4Tv9y2z8UHo=
+golang.org/x/sys v0.0.0-20210507161434-a76c4d0a0096/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
