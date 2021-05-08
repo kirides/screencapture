@@ -91,7 +91,7 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	desc := _DXGI_OUTDUPL_DESC{}
 	hr = dup.outputDuplication.GetDesc(&desc)
 	if failed(hr) {
-		return nil, nil, nil, fmt.Errorf("failed to get the description. %w", _DXGI_ERROR(hr))
+		return nil, nil, nil, fmt.Errorf("failed to get the description. %w", HRESULT(hr))
 	}
 
 	if desc.DesktopImageInSystemMemory != 0 {
@@ -110,11 +110,11 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	dup.ReleaseFrame()
 	hrF := dup.outputDuplication.AcquireNextFrame(timeoutMs, &frameInfo, &desktop)
 	if failed(int32(hrF)) {
-		if _DXGI_ERROR(hrF) == DXGI_ERROR_WAIT_TIMEOUT {
+		if HRESULT(hrF) == DXGI_ERROR_WAIT_TIMEOUT {
 			dup.acquiredFrame = true
 			return nil, nil, nil, errNoImageYet
 		}
-		return nil, nil, nil, fmt.Errorf("failed to AcquireNextFrame. %w", _DXGI_ERROR(hrF))
+		return nil, nil, nil, fmt.Errorf("failed to AcquireNextFrame. %w", HRESULT(hrF))
 	}
 	defer desktop.Release()
 	dup.acquiredFrame = true
@@ -125,14 +125,14 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	var desktop2d *ID3D11Texture2D
 	hr = desktop.QueryInterface(iid_ID3D11Texture2D, &desktop2d)
 	if failed(hr) {
-		return nil, nil, nil, fmt.Errorf("failed to QueryInterface(iid_ID3D11Texture2D, ...). %w", _DXGI_ERROR(hr))
+		return nil, nil, nil, fmt.Errorf("failed to QueryInterface(iid_ID3D11Texture2D, ...). %w", HRESULT(hr))
 	}
 	defer desktop2d.Release()
 
 	if dup.stagedTex == nil {
 		hr = dup.initializeStage(desktop2d)
 		if failed(hr) {
-			return nil, nil, nil, fmt.Errorf("failed to InitializeStage. %w", _DXGI_ERROR(hr))
+			return nil, nil, nil, fmt.Errorf("failed to InitializeStage. %w", HRESULT(hr))
 		}
 	}
 
@@ -153,7 +153,7 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 
 	hr = dup.surface.Map(&dup.mappedRect, DXGI_MAP_READ)
 	if failed(hr) {
-		return nil, nil, nil, fmt.Errorf("failed to surface_.Map(...). %v", _DXGI_ERROR(hr))
+		return nil, nil, nil, fmt.Errorf("failed to surface_.Map(...). %v", HRESULT(hr))
 	}
 	return dup.surface.Unmap, &dup.mappedRect, &dup.size, nil
 }

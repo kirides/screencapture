@@ -1,7 +1,6 @@
 package d3d
 
 import (
-	"fmt"
 	"syscall"
 	"unsafe"
 
@@ -70,10 +69,7 @@ func _D3D11CreateDevice(ppDevice **ID3D11Device, ppDeviceContext **ID3D11DeviceC
 	)
 
 	if ret != 0 {
-		if _DXGI_ERROR(ret) == ERROR_INVALID_ARG {
-			return fmt.Errorf("FAILED INVALID ARGUMENT")
-		}
-		return fmt.Errorf("FAILED %v", ret)
+		return HRESULT(ret)
 	}
 	return nil
 }

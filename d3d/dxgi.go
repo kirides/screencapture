@@ -41,7 +41,7 @@ func NewIDXGIOutputDuplication(device *ID3D11Device, deviceCtx *ID3D11DeviceCont
 		var d3dInfoQueue *ID3D11InfoQueue
 		hr = d3dDebug.QueryInterface(iid_ID3D11InfoQueue, &d3dInfoQueue)
 		if failed(hr) {
-			return nil, fmt.Errorf("failed at device.QueryInterface. %v", _DXGI_ERROR(hr))
+			return nil, fmt.Errorf("failed at device.QueryInterface. %w", HRESULT(hr))
 		}
 		defer d3dInfoQueue.Release()
 		// defer d3dDebug.ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY | D3D11_RLDO_DETAIL)
@@ -50,14 +50,14 @@ func NewIDXGIOutputDuplication(device *ID3D11Device, deviceCtx *ID3D11DeviceCont
 	var dxgiDevice1 *IDXGIDevice1
 	hr = device.QueryInterface(iid_IDXGIDevice1, &dxgiDevice1)
 	if failed(hr) {
-		return nil, fmt.Errorf("failed at device.QueryInterface. %v", _DXGI_ERROR(hr))
+		return nil, fmt.Errorf("failed at device.QueryInterface. %w", HRESULT(hr))
 	}
 	defer dxgiDevice1.Release()
 
 	var pdxgiAdapter unsafe.Pointer
 	hr = dxgiDevice1.GetParent(iid_IDXGIAdapter1, &pdxgiAdapter)
 	if failed(hr) {
-		return nil, fmt.Errorf("failed at dxgiDevice1.GetAdapter. %v", _DXGI_ERROR(hr))
+		return nil, fmt.Errorf("failed at dxgiDevice1.GetAdapter. %w", HRESULT(hr))
 	}
 	dxgiAdapter := (*IDXGIAdapter1)(pdxgiAdapter)
 	defer dxgiAdapter.Release()
@@ -66,14 +66,14 @@ func NewIDXGIOutputDuplication(device *ID3D11Device, deviceCtx *ID3D11DeviceCont
 	// const DXGI_ERROR_NOT_FOUND = 0x887A0002
 	hr = int32(dxgiAdapter.EnumOutputs(output, &dxgiOutput))
 	if failed(hr) {
-		return nil, fmt.Errorf("failed at dxgiAdapter.EnumOutputs. %v", _DXGI_ERROR(hr))
+		return nil, fmt.Errorf("failed at dxgiAdapter.EnumOutputs. %w", HRESULT(hr))
 	}
 	defer dxgiOutput.Release()
 
 	var dxgiOutput5 *IDXGIOutput5
 	hr = dxgiOutput.QueryInterface(iid_IDXGIOutput5, &dxgiOutput5)
 	if failed(hr) {
-		return nil, fmt.Errorf("failed at dxgiOutput.QueryInterface. %v", _DXGI_ERROR(hr))
+		return nil, fmt.Errorf("failed at dxgiOutput.QueryInterface. %w", HRESULT(hr))
 	}
 	defer dxgiOutput5.Release()
 	var dup *IDXGIOutputDuplication
@@ -90,12 +90,12 @@ func NewIDXGIOutputDuplication(device *ID3D11Device, deviceCtx *ID3D11DeviceCont
 		var dxgiOutput1 *IDXGIOutput1
 		hr = dxgiOutput.QueryInterface(iid_IDXGIOutput1, &dxgiOutput1)
 		if failed(hr) {
-			return nil, fmt.Errorf("failed at dxgiOutput.QueryInterface. %v", uint32(hr))
+			return nil, fmt.Errorf("failed at dxgiOutput.QueryInterface. %w", HRESULT(hr))
 		}
 		defer dxgiOutput1.Release()
 		hr = dxgiOutput1.DuplicateOutput(dxgiDevice1, &dup)
 		if failed(hr) {
-			return nil, fmt.Errorf("failed at dxgiOutput1.DuplicateOutput. %v", uint32(hr))
+			return nil, fmt.Errorf("failed at dxgiOutput1.DuplicateOutput. %w", HRESULT(hr))
 		}
 	}
 
