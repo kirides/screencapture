@@ -27,10 +27,16 @@ for i := 0; i < n; i++ {
     // ...
     // streamDisplay(ctx, i, framerate, stream)  // <= USE GDI BitBlt
     streamDisplayDXGI(ctx, i, framerate, stream) // <= USE IDXGIOutputDuplication
+    // captureScreenTranscode(ctx, i, desiredFps)
     http.HandleFunc(fmt.Sprintf("/mjpeg%d", i), stream.ServeHTTP)
 }
 // ...
 ```
+
+### screen recording with ffmpeg
+
+The code contains the function `captureScreenTranscode` which allows you to record the
+selected screen directly into ffmpeg and transcode it to h264 in an mp4 container.
 
 ## Performance
 

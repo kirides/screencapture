@@ -53,13 +53,13 @@ func main() {
 
 	const desiredFps = 30
 	framerate := time.Second / desiredFps
-	for i := 0; i < n-1; i++ {
+	for i := 0; i < n; i++ {
 		fmt.Fprintf(os.Stderr, "Registering stream %d\n", i)
 		stream := mjpeg.NewStreamWithInterval(framerate)
 		defer stream.Close()
 		// streamDisplay(ctx, i, desiredFps, stream)
-		// streamDisplayDXGI(ctx, i, desiredFps, stream)
-		captureScreenTranscode(ctx, i, desiredFps)
+		streamDisplayDXGI(ctx, i, desiredFps, stream)
+		// captureScreenTranscode(ctx, i, desiredFps)
 		http.HandleFunc(fmt.Sprintf("/mjpeg%d", i), stream.ServeHTTP)
 	}
 	go func() {
