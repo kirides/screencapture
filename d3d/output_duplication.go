@@ -74,7 +74,7 @@ func (dup *OutputDuplicator) Release() {
 	}
 }
 
-var errNoImageYet = errors.New("no image yet")
+var ErrNoImageYet = errors.New("no image yet")
 
 type unmapFn func() int32
 
@@ -112,14 +112,14 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	if failed(int32(hrF)) {
 		if HRESULT(hrF) == DXGI_ERROR_WAIT_TIMEOUT {
 			dup.acquiredFrame = true
-			return nil, nil, nil, errNoImageYet
+			return nil, nil, nil, ErrNoImageYet
 		}
 		return nil, nil, nil, fmt.Errorf("failed to AcquireNextFrame. %w", HRESULT(hrF))
 	}
 	defer desktop.Release()
 	dup.acquiredFrame = true
 	if frameInfo.AccumulatedFrames == 0 {
-		return nil, nil, nil, errNoImageYet
+		return nil, nil, nil, ErrNoImageYet
 	}
 
 	var desktop2d *ID3D11Texture2D
@@ -204,9 +204,6 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 func (dup *OutputDuplicator) GetImage(img *image.RGBA, timeoutMs uint) error {
 	unmap, mappedRect, size, err := dup.Snapshot(timeoutMs)
 	if err != nil {
-		if errors.Is(err, errNoImageYet) {
-			return nil
-		}
 		return err
 	}
 	defer unmap()

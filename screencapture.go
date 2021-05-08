@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"io"
@@ -62,7 +63,7 @@ func captureScreenTranscode(ctx context.Context, n int, framerate time.Duration)
 			}
 			// Grab an image.RGBA from the current output presenter
 			err = ddup.GetImage(imgBuf, 0)
-			if err != nil {
+			if err != nil && !errors.Is(err, d3d.ErrNoImageYet) {
 				fmt.Printf("Err ddup.GetImage: %v\n", err)
 				return
 			}

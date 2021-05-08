@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -185,6 +186,11 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 			// Grab an image.RGBA from the current output presenter
 			err = ddup.GetImage(imgBuf, maxTimeoutMs)
 			if err != nil {
+				if errors.Is(err, d3d.ErrNoImageYet) {
+					out.Update(buf.Bytes())
+					<-ticker.C
+					continue
+				}
 				fmt.Printf("Err ddup.GetImage: %v\n", err)
 				// Retry with new ddup, can occur when changing resolution
 				ddup.Release()
