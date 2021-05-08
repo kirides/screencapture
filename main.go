@@ -51,13 +51,15 @@ func main() {
 </body>`))
 	})
 
-	framerate := time.Second / 120
-	for i := 0; i < n; i++ {
+	const desiredFps = 30
+	framerate := time.Second / desiredFps
+	for i := 0; i < n-1; i++ {
 		fmt.Fprintf(os.Stderr, "Registering stream %d\n", i)
 		stream := mjpeg.NewStreamWithInterval(framerate)
 		defer stream.Close()
-		// streamDisplay(ctx, i, framerate, stream)
-		streamDisplayDXGI(ctx, i, framerate, stream)
+		// streamDisplay(ctx, i, desiredFps, stream)
+		// streamDisplayDXGI(ctx, i, desiredFps, stream)
+		captureScreenTranscode(ctx, i, desiredFps)
 		http.HandleFunc(fmt.Sprintf("/mjpeg%d", i), stream.ServeHTTP)
 	}
 	go func() {
@@ -78,7 +80,7 @@ func streamDisplay(ctx context.Context, n int, framerate time.Duration, out *mjp
 	go func() {
 		buf := &bufferFlusher{}
 		opts := &jpeg.Options{Quality: 75}
-		ticker := time.NewTicker(framerate)
+		ticker := time.NewTicker(time.Second / framerate)
 
 		var err error
 		finalBounds := screenshot.GetDisplayBounds(n)
@@ -145,7 +147,7 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 		const maxTimeoutMs = 150
 		buf := &bufferFlusher{Buffer: bytes.Buffer{}}
 		opts := &jpeg.Options{Quality: 75}
-		ticker := time.NewTicker(framerate)
+		ticker := time.NewTicker(time.Second / framerate)
 
 		// Create image that can contain the wanted output (desktop)
 		finalBounds := screenshot.GetDisplayBounds(n)
