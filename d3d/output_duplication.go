@@ -107,6 +107,8 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	var frameInfo _DXGI_OUTDUPL_FRAME_INFO
 
 	// Release a possible previous frame
+	// TODO: Properly use ReleaseFrame...
+
 	dup.ReleaseFrame()
 	hrF := dup.outputDuplication.AcquireNextFrame(timeoutMs, &frameInfo, &desktop)
 	if failed(int32(hrF)) {
@@ -116,6 +118,9 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 		}
 		return nil, nil, nil, fmt.Errorf("failed to AcquireNextFrame. %w", HRESULT(hrF))
 	}
+	// If we do not release the frame ASAP, we only get FPS / 2 frames :/
+	// Something wrong here?
+	defer dup.ReleaseFrame()
 	defer desktop.Release()
 	dup.acquiredFrame = true
 	if frameInfo.AccumulatedFrames == 0 {

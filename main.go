@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"image/jpeg"
 	"net/http"
 	"runtime"
 
@@ -20,6 +19,7 @@ import (
 
 	"github.com/kbinani/screenshot"
 	"github.com/mattn/go-mjpeg"
+	jpegturbo "github.com/pixiv/go-libjpeg/jpeg"
 )
 
 func main() {
@@ -52,15 +52,14 @@ func main() {
 </body>`))
 	})
 
-	const desiredFps = 30
-	framerate := time.Second / desiredFps
+	framerate := 30
 	for i := 0; i < n; i++ {
 		fmt.Fprintf(os.Stderr, "Registering stream %d\n", i)
-		stream := mjpeg.NewStreamWithInterval(framerate)
+		stream := mjpeg.NewStream()
 		defer stream.Close()
-		// streamDisplay(ctx, i, desiredFps, stream)
-		streamDisplayDXGI(ctx, i, desiredFps, stream)
-		// captureScreenTranscode(ctx, i, desiredFps)
+		// streamDisplay(ctx, i, framerate, stream)
+		streamDisplayDXGI(ctx, i, framerate, stream)
+		// captureScreenTranscode(ctx, i, framerate)
 		http.HandleFunc(fmt.Sprintf("/mjpeg%d", i), stream.ServeHTTP)
 	}
 	go func() {
@@ -72,7 +71,7 @@ func main() {
 }
 
 // Capture using "github.com/kbinani/screenshot" (modified to reuse image.RGBA)
-func streamDisplay(ctx context.Context, n int, framerate time.Duration, out *mjpeg.Stream) {
+func streamDisplay(ctx context.Context, n int, framerate int, out *mjpeg.Stream) {
 	max := screenshot.NumActiveDisplays()
 	if n >= max {
 		fmt.Printf("Not enough displays\n")
@@ -80,8 +79,8 @@ func streamDisplay(ctx context.Context, n int, framerate time.Duration, out *mjp
 	}
 	go func() {
 		buf := &bufferFlusher{}
-		opts := &jpeg.Options{Quality: 75}
-		ticker := time.NewTicker(time.Second / framerate)
+		opts := &jpegturbo.EncoderOptions{Quality: 75}
+		limiter := newFrameLimiter(framerate)
 
 		var err error
 		finalBounds := screenshot.GetDisplayBounds(n)
@@ -93,6 +92,7 @@ func streamDisplay(ctx context.Context, n int, framerate time.Duration, out *mjp
 			case <-ctx.Done():
 				return
 			default:
+				limiter.Wait()
 			}
 			bounds := screenshot.GetDisplayBounds(n)
 
@@ -109,16 +109,15 @@ func streamDisplay(ctx context.Context, n int, framerate time.Duration, out *mjp
 			}
 			buf.Reset()
 
-			jpeg.Encode(buf, imgBuf, opts)
+			jpegturbo.Encode(buf, imgBuf, opts)
 			out.Update(buf.Bytes())
-			<-ticker.C
 		}
 	}()
 }
 
 // Capture using IDXGIOutputDuplication
 //     https://docs.microsoft.com/en-us/windows/win32/api/dxgi1_2/nn-dxgi1_2-idxgioutputduplication
-func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out *mjpeg.Stream) {
+func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Stream) {
 	max := screenshot.NumActiveDisplays()
 	if n >= max {
 		fmt.Printf("Not enough displays\n")
@@ -145,11 +144,9 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 			}
 		}()
 
-		const maxTimeoutMs = 150
 		buf := &bufferFlusher{Buffer: bytes.Buffer{}}
-		opts := &jpeg.Options{Quality: 75}
-		ticker := time.NewTicker(time.Second / framerate)
-
+		opts := &jpegturbo.EncoderOptions{Quality: 75}
+		limiter := newFrameLimiter(framerate)
 		// Create image that can contain the wanted output (desktop)
 		finalBounds := screenshot.GetDisplayBounds(n)
 		imgBuf := image.NewRGBA(finalBounds)
@@ -160,6 +157,7 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 			case <-ctx.Done():
 				return
 			default:
+				limiter.Wait()
 			}
 			bounds := screenshot.GetDisplayBounds(n)
 			newBounds := image.Rect(0, 0, int(bounds.Dx()), int(bounds.Dy()))
@@ -178,17 +176,15 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 				ddup, err = d3d.NewIDXGIOutputDuplication(device, deviceCtx, uint(n))
 				if err != nil {
 					fmt.Printf("err: %v\n", err)
-					<-ticker.C
 					continue
 				}
 			}
 
 			// Grab an image.RGBA from the current output presenter
-			err = ddup.GetImage(imgBuf, maxTimeoutMs)
+			err = ddup.GetImage(imgBuf, 0)
 			if err != nil {
 				if errors.Is(err, d3d.ErrNoImageYet) {
-					out.Update(buf.Bytes())
-					<-ticker.C
+					// don't update
 					continue
 				}
 				fmt.Printf("Err ddup.GetImage: %v\n", err)
@@ -198,10 +194,8 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate time.Duration, out 
 				continue
 			}
 			buf.Reset()
-
-			jpeg.Encode(buf, imgBuf, opts)
+			jpegturbo.Encode(buf, imgBuf, opts)
 			out.Update(buf.Bytes())
-			<-ticker.C
 		}
 	}()
 }
@@ -213,3 +207,62 @@ type bufferFlusher struct {
 }
 
 func (*bufferFlusher) Flush() error { return nil }
+
+// finer granularity for sleeping
+type frameLimiter struct {
+	DesiredFps  int
+	frameTimeNs int64
+
+	LastFrameTime     time.Time
+	LastSleepDuration time.Duration
+
+	DidSleep bool
+	DidSpin  bool
+}
+
+func newFrameLimiter(desiredFps int) *frameLimiter {
+	return &frameLimiter{
+		DesiredFps:    desiredFps,
+		frameTimeNs:   (time.Second / time.Duration(desiredFps)).Nanoseconds(),
+		LastFrameTime: time.Now(),
+	}
+}
+
+func (l *frameLimiter) Wait() {
+	l.DidSleep = false
+	l.DidSpin = false
+
+	now := time.Now()
+	spinWaitUntil := now
+
+	sleepTime := l.frameTimeNs - now.Sub(l.LastFrameTime).Nanoseconds()
+
+	if sleepTime > int64(1*time.Millisecond) {
+		if sleepTime < int64(30*time.Millisecond) {
+			l.LastSleepDuration = time.Duration(sleepTime / 8)
+		} else {
+			l.LastSleepDuration = time.Duration(sleepTime / 4 * 3)
+		}
+		time.Sleep(time.Duration(l.LastSleepDuration))
+		l.DidSleep = true
+
+		newNow := time.Now()
+		spinWaitUntil = newNow.Add(time.Duration(sleepTime) - newNow.Sub(now))
+		now = newNow
+
+		for spinWaitUntil.After(now) {
+			now = time.Now()
+			// SPIN WAIT
+			l.DidSpin = true
+		}
+	} else {
+		l.LastSleepDuration = 0
+		spinWaitUntil = now.Add(time.Duration(sleepTime))
+		for spinWaitUntil.After(now) {
+			now = time.Now()
+			// SPIN WAIT
+			l.DidSpin = true
+		}
+	}
+	l.LastFrameTime = time.Now()
+}

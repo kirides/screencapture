@@ -14,7 +14,7 @@ import (
 	"github.com/kbinani/screenshot"
 )
 
-func captureScreenTranscode(ctx context.Context, n int, framerate time.Duration) {
+func captureScreenTranscode(ctx context.Context, n int, framerate int) {
 	max := screenshot.NumActiveDisplays()
 	if n >= max {
 		fmt.Printf("Not enough displays\n")
@@ -42,7 +42,7 @@ func captureScreenTranscode(ctx context.Context, n int, framerate time.Duration)
 		}
 		defer ddup.Release()
 
-		ticker := time.NewTicker(time.Second / framerate)
+		limiter := newFrameLimiter(framerate)
 
 		// Create image that can contain the wanted output (desktop)
 		imgBuf := image.NewRGBA(screenBounds)
@@ -60,6 +60,7 @@ func captureScreenTranscode(ctx context.Context, n int, framerate time.Duration)
 			case <-ctx.Done():
 				return
 			default:
+				limiter.Wait()
 			}
 			// Grab an image.RGBA from the current output presenter
 			err = ddup.GetImage(imgBuf, 0)
@@ -75,7 +76,6 @@ func captureScreenTranscode(ctx context.Context, n int, framerate time.Duration)
 				fmt.Printf("Failed to write image: %v\n", err)
 				return
 			}
-			<-ticker.C
 		}
 	}()
 }
