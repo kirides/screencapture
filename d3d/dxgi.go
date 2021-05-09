@@ -9,14 +9,17 @@ import (
 )
 
 var (
+	modDXGI                = windows.NewLazySystemDLL("dxgi.dll")
+	procCreateDXGIFactory1 = modDXGI.NewProc("CreateDXGIFactory1")
+
 	// iid_IDXGIDevice, _   = windows.GUIDFromString("{54ec77fa-1377-44e6-8c32-88fd5f44c84c}")
 	iid_IDXGIDevice1, _ = windows.GUIDFromString("{77db970f-6276-48ba-ba28-070143b4392c}")
 	// iid_IDXGIAdapter, _  = windows.GUIDFromString("{2411E7E1-12AC-4CCF-BD14-9798E8534DC0}")
 	iid_IDXGIAdapter1, _ = windows.GUIDFromString("{29038f61-3839-4626-91fd-086879011a05}")
 	// iid_IDXGIOutput, _   = windows.GUIDFromString("{ae02eedb-c735-4690-8d52-5a8dc20213aa}")
-	iid_IDXGIOutput1, _ = windows.GUIDFromString("{00cddea8-939b-4b83-a340-a685226666cc}")
-	iid_IDXGIOutput5, _ = windows.GUIDFromString("{80A07424-AB52-42EB-833C-0C42FD282D98}")
-	// iid_IDXGIFactory1, _ = windows.GUIDFromString("{770aae78-f26f-4dba-a829-253c83d1b387}")
+	iid_IDXGIOutput1, _  = windows.GUIDFromString("{00cddea8-939b-4b83-a340-a685226666cc}")
+	iid_IDXGIOutput5, _  = windows.GUIDFromString("{80A07424-AB52-42EB-833C-0C42FD282D98}")
+	iid_IDXGIFactory1, _ = windows.GUIDFromString("{770aae78-f26f-4dba-a829-253c83d1b387}")
 	// iid_IDXGIResource, _ = windows.GUIDFromString("{035f3ab4-482e-4e50-b41f-8a7f8bd8960b}")
 	iid_IDXGISurface, _ = windows.GUIDFromString("{cafcb56c-6ac3-4889-bf47-9e23bbd260ec}")
 )
@@ -26,6 +29,47 @@ const (
 	DXGI_MAP_WRITE   = 1 << 1
 	DXGI_MAP_DISCARD = 1 << 2
 )
+
+type IDXGIFactory1 struct {
+	vtbl *iDXGIFactory1Vtbl
+}
+
+func (obj *IDXGIFactory1) Release() int32 {
+	ret, _, _ := syscall.Syscall(
+		obj.vtbl.Release,
+		1,
+		uintptr(unsafe.Pointer(obj)),
+		0,
+		0,
+	)
+	return int32(ret)
+}
+
+func (obj *IDXGIFactory1) EnumAdapters1(adapter uint, pp **IDXGIAdapter1) int32 {
+	ret, _, _ := syscall.Syscall(
+		obj.vtbl.EnumAdapters1,
+		3,
+		uintptr(unsafe.Pointer(obj)),
+		uintptr(adapter),
+		uintptr(unsafe.Pointer(pp)),
+	)
+	return int32(ret)
+}
+
+func _CreateDXGIFactory1(ppFactory **IDXGIFactory1) error {
+	ret, _, _ := syscall.Syscall(
+		procCreateDXGIFactory1.Addr(),
+		2,
+		uintptr(unsafe.Pointer(&iid_IDXGIFactory1)),
+		uintptr(unsafe.Pointer(ppFactory)),
+		0,
+	)
+	if ret != 0 {
+		return HRESULT(ret)
+	}
+
+	return nil
+}
 
 // NewXASession casts your ppv from above to a *XASession
 func NewIDXGIOutputDuplication(device *ID3D11Device, deviceCtx *ID3D11DeviceContext, output uint) (*OutputDuplicator, error) {

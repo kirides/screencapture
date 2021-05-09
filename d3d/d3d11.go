@@ -1,6 +1,7 @@
 package d3d
 
 import (
+	"fmt"
 	"syscall"
 	"unsafe"
 
@@ -34,16 +35,28 @@ const (
 )
 
 func _D3D11CreateDevice(ppDevice **ID3D11Device, ppDeviceContext **ID3D11DeviceContext) error {
+	var factory1 *IDXGIFactory1
+	if err := _CreateDXGIFactory1(&factory1); err != nil {
+		return fmt.Errorf("CreateDXGIFactory1: %w", err)
+	}
+	defer factory1.Release()
+
+	var adapter1 *IDXGIAdapter1
+	if hr := factory1.EnumAdapters1(0, &adapter1); failed(hr) {
+		return fmt.Errorf("failed to enumerate desktop adapter. %w", HRESULT(hr))
+	}
+	defer adapter1.Release()
+
 	fflags := [...]uint32{
 		// 0xc100, // D3D_FEATURE_LEVEL_12_1
 		// 0xc000, // D3D_FEATURE_LEVEL_12_0
 		0xb100, // D3D_FEATURE_LEVEL_11_1
 		0xb000, // D3D_FEATURE_LEVEL_11_0
-		0xa100, // D3D_FEATURE_LEVEL_10_1
-		0xa000, // D3D_FEATURE_LEVEL_10_0
-		0x9300, // D3D_FEATURE_LEVEL_9_3
-		0x9200, // D3D_FEATURE_LEVEL_9_2
-		0x9100, // D3D_FEATURE_LEVEL_9_1
+		// 0xa100, // D3D_FEATURE_LEVEL_10_1
+		// 0xa000, // D3D_FEATURE_LEVEL_10_0
+		// 0x9300, // D3D_FEATURE_LEVEL_9_3
+		// 0x9200, // D3D_FEATURE_LEVEL_9_2
+		// 0x9100, // D3D_FEATURE_LEVEL_9_1
 		// 0x1000, // D3D_FEATURE_LEVEL_1_0_CORE <-- unsupported!
 	}
 	featureLevel := 0x9100
@@ -54,8 +67,8 @@ func _D3D11CreateDevice(ppDevice **ID3D11Device, ppDeviceContext **ID3D11DeviceC
 	ret, _, _ := syscall.Syscall12(
 		procD3D11CreateDevice.Addr(),
 		10,
-		0,                                   // pAdapter
-		uintptr(1),                          // driverType: 1 = Hardware
+		uintptr(unsafe.Pointer(adapter1)),   // pAdapter
+		uintptr(0),                          // driverType: 1 = Hardware
 		0,                                   // software
 		uintptr(flags),                      // flags
 		uintptr(unsafe.Pointer(&fflags[0])), // supported feature levels

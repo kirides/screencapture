@@ -123,3 +123,18 @@ type iDXGIOutputDuplicationVtbl struct {
 	UnMapDesktopSurface  uintptr
 	ReleaseFrame         uintptr
 }
+type iDXGIFactoryVtbl struct {
+	iDXGIObjectVtbl
+
+	EnumAdapters          uintptr
+	MakeWindowAssociation uintptr
+	GetWindowAssociation  uintptr
+	CreateSwapChain       uintptr
+	CreateSoftwareAdapter uintptr
+}
+type iDXGIFactory1Vtbl struct {
+	iDXGIFactoryVtbl
+
+	EnumAdapters1 uintptr
+	IsCurrent     uintptr
+}
