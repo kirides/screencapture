@@ -111,9 +111,9 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 
 	dup.ReleaseFrame()
 	hrF := dup.outputDuplication.AcquireNextFrame(timeoutMs, &frameInfo, &desktop)
+	dup.acquiredFrame = true
 	if failed(int32(hrF)) {
 		if HRESULT(hrF) == DXGI_ERROR_WAIT_TIMEOUT {
-			dup.acquiredFrame = true
 			return nil, nil, nil, ErrNoImageYet
 		}
 		return nil, nil, nil, fmt.Errorf("failed to AcquireNextFrame. %w", HRESULT(hrF))
@@ -122,7 +122,7 @@ func (dup *OutputDuplicator) Snapshot(timeoutMs uint) (unmapFn, *DXGI_MAPPED_REC
 	// Something wrong here?
 	defer dup.ReleaseFrame()
 	defer desktop.Release()
-	dup.acquiredFrame = true
+
 	if frameInfo.AccumulatedFrames == 0 {
 		return nil, nil, nil, ErrNoImageYet
 	}
