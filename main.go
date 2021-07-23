@@ -19,7 +19,6 @@ import (
 
 	"github.com/kbinani/screenshot"
 	"github.com/mattn/go-mjpeg"
-	jpegturbo "github.com/pixiv/go-libjpeg/jpeg"
 )
 
 func main() {
@@ -52,7 +51,7 @@ func main() {
 </body>`))
 	})
 
-	framerate := 30
+	framerate := 10
 	for i := 0; i < n; i++ {
 		fmt.Fprintf(os.Stderr, "Registering stream %d\n", i)
 		stream := mjpeg.NewStream()
@@ -63,7 +62,7 @@ func main() {
 		http.HandleFunc(fmt.Sprintf("/mjpeg%d", i), stream.ServeHTTP)
 	}
 	go func() {
-		http.ListenAndServe("127.0.0.1:8023", nil)
+		http.ListenAndServe("0.0.0.0:8023", nil)
 
 	}()
 	<-ctx.Done()
@@ -78,7 +77,7 @@ func streamDisplay(ctx context.Context, n int, framerate int, out *mjpeg.Stream)
 		return
 	}
 	buf := &bufferFlusher{}
-	opts := &jpegturbo.EncoderOptions{Quality: 75}
+	opts := jpegQuality(75)
 	limiter := newFrameLimiter(framerate)
 
 	var err error
@@ -108,7 +107,7 @@ func streamDisplay(ctx context.Context, n int, framerate int, out *mjpeg.Stream)
 		}
 		buf.Reset()
 
-		jpegturbo.Encode(buf, imgBuf, opts)
+		encodeJpeg(buf, imgBuf, opts)
 		out.Update(buf.Bytes())
 	}
 }
@@ -142,7 +141,7 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Str
 	}()
 
 	buf := &bufferFlusher{Buffer: bytes.Buffer{}}
-	opts := &jpegturbo.EncoderOptions{Quality: 75}
+	opts := jpegQuality(75)
 	limiter := newFrameLimiter(framerate)
 	// Create image that can contain the wanted output (desktop)
 	finalBounds := screenshot.GetDisplayBounds(n)
@@ -191,7 +190,7 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Str
 			continue
 		}
 		buf.Reset()
-		jpegturbo.Encode(buf, imgBuf, opts)
+		encodeJpeg(buf, imgBuf, opts)
 		out.Update(buf.Bytes())
 	}
 }
