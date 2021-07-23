@@ -14,6 +14,7 @@ func CaptureImg(img *image.RGBA, x, y, width, height int) error {
 	return captureImg(img, x, y, width, height)
 }
 
+// code is mostly from github.com/kbinani/screenshot
 func captureImg(img *image.RGBA, x, y, width, height int) error {
 	hWnd := syscall.Handle(getDesktopWindow())
 	hdc := win.GetDC(win.HWND(hWnd))
