@@ -123,6 +123,18 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Str
 
 	// Keep this thread, so windows/d3d11/dxgi can use their threadlocal caches, if any
 	runtime.LockOSThread()
+
+	// Make thread PerMonitorV2 Dpi aware if supported on OS
+	// allows to let windows handle BGRA -> RGBA conversion and possibly more things
+	if isValidDpiAwarenessContext(DpiAwarenessContextPerMonitorAwareV2) {
+		_, err := setThreadDpiAwarenessContext(DpiAwarenessContextPerMonitorAwareV2)
+		if err != nil {
+			fmt.Printf("Could not set thread DPI awareness to PerMonitorAwareV2. %v\n", err)
+		} else {
+			fmt.Printf("Enabled PerMonitorAwareV2 DPI awareness.\n")
+		}
+	}
+
 	// Setup D3D11 stuff
 	device, deviceCtx, err := d3d.NewD3D11Device()
 	if err != nil {

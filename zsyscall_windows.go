@@ -58,10 +58,12 @@ var (
 	procGetClipboardFormatNameW       = modUser32.NewProc("GetClipboardFormatNameW")
 	procGetDesktopWindow              = modUser32.NewProc("GetDesktopWindow")
 	procIsClipboardFormatAvailable    = modUser32.NewProc("IsClipboardFormatAvailable")
+	procIsValidDpiAwarenessContext    = modUser32.NewProc("IsValidDpiAwarenessContext")
 	procOpenClipboard                 = modUser32.NewProc("OpenClipboard")
 	procRegisterClipboardFormatW      = modUser32.NewProc("RegisterClipboardFormatW")
 	procRemoveClipboardFormatListener = modUser32.NewProc("RemoveClipboardFormatListener")
 	procSetClipboardData              = modUser32.NewProc("SetClipboardData")
+	procSetThreadDpiAwarenessContext  = modUser32.NewProc("SetThreadDpiAwarenessContext")
 	procSetWindowsHookExW             = modUser32.NewProc("SetWindowsHookExW")
 )
 
@@ -189,6 +191,12 @@ func isClipboardFormatAvailable(uFormat uint32) (err error) {
 	return
 }
 
+func isValidDpiAwarenessContext(value int32) (n bool) {
+	r0, _, _ := syscall.Syscall(procIsValidDpiAwarenessContext.Addr(), 1, uintptr(value), 0, 0)
+	n = r0 != 0
+	return
+}
+
 func openClipboard(h syscall.Handle) (err error) {
 	r1, _, e1 := syscall.Syscall(procOpenClipboard.Addr(), 1, uintptr(h), 0, 0)
 	if r1 == 0 {
@@ -227,6 +235,15 @@ func setClipboardData(uFormat uint32, hMem syscall.Handle) (h syscall.Handle, er
 	r0, _, e1 := syscall.Syscall(procSetClipboardData.Addr(), 2, uintptr(uFormat), uintptr(hMem), 0)
 	h = syscall.Handle(r0)
 	if h == 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+
+func setThreadDpiAwarenessContext(value int32) (n int, err error) {
+	r0, _, e1 := syscall.Syscall(procSetThreadDpiAwarenessContext.Addr(), 1, uintptr(value), 0, 0)
+	n = int(r0)
+	if n == 0 {
 		err = errnoErr(e1)
 	}
 	return

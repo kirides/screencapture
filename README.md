@@ -55,3 +55,5 @@ the higher the bigger the difference) and uses a lot less resources for cases wh
 
 To make use of `IDXGIOutput5::DuplicateOutput1`, an application has to provide support for `PerMonitorV2` DPI-Awareness (Windows 10 1703+)
 This is usually done by providing an my-executable.exe.manifest file either next to the executable, or as an embedded resource.
+
+In this application there are calls to `IsValidDpiAwarenessContext` and `SetThreadDpiAwarenessContext` which circumvent the requirement.

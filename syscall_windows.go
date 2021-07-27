@@ -75,3 +75,15 @@ const (
 //sys	heapSize(hHeap syscall.Handle, dwFlags uint32, lpMem uintptr) (size uintptr, err error) [failretval==^uintptr(r0)] = Kernel32.HeapSize
 
 //sys	dragQueryFile(hDrop syscall.Handle, iFile int, buf *uint16, len uint32) (n int, err error) = Shell32.DragQueryFileW
+
+const (
+	DpiAwarenessContextUndefined         = 0
+	DpiAwarenessContextUnaware           = -1
+	DpiAwarenessContextSystemAware       = -2
+	DpiAwarenessContextPerMonitorAware   = -3
+	DpiAwarenessContextPerMonitorAwareV2 = -4
+	DpiAwarenessContextUnawareGdiScaled  = -5
+)
+
+//sys	setThreadDpiAwarenessContext(value int32) (n int, err error) = User32.SetThreadDpiAwarenessContext
+//sys	isValidDpiAwarenessContext(value int32) (n bool) = User32.IsValidDpiAwarenessContext
