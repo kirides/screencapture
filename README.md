@@ -1,4 +1,4 @@
-# Screen Share
+# Screencapture
 
 ## Motivation
 
@@ -20,7 +20,7 @@ Just build the application and run it.
 It should serve all your monitors on an URL like `http://127.0.0.1:8023/watch?screen=N`  
 where `screen=N <- N` is the monitor index, starting at zero (`0`).
 
-By changing the lines in `main.go` regarding the streaming, you can switch between GDI `BitBlt` or `IDXGIOutputDuplication`
+By changing the lines in `cmd/example/main.go` regarding the streaming, you can switch between GDI `BitBlt` or `IDXGIOutputDuplication`
 
 ```go
 // ...
