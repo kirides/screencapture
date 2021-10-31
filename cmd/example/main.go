@@ -12,10 +12,14 @@ import (
 	// _ "net/http/pprof"
 	"os"
 	"os/signal"
-	"screen-share/d3d"
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/kirides/screencapture/d3d"
+	forkscreenshot "github.com/kirides/screencapture/screenshot"
+	"github.com/kirides/screencapture/win"
+	"github.com/nfnt/resize"
 
 	"github.com/kbinani/screenshot"
 	"github.com/mattn/go-mjpeg"
@@ -51,7 +55,7 @@ func main() {
 </body>`))
 	})
 
-	framerate := 10
+	framerate := 15
 	for i := 0; i < n; i++ {
 		fmt.Fprintf(os.Stderr, "Registering stream %d\n", i)
 		stream := mjpeg.NewStream()
@@ -78,7 +82,7 @@ func streamDisplay(ctx context.Context, n int, framerate int, out *mjpeg.Stream)
 	}
 	buf := &bufferFlusher{}
 	opts := jpegQuality(75)
-	limiter := newFrameLimiter(framerate)
+	limiter := NewFrameLimiter(framerate)
 
 	var err error
 	finalBounds := screenshot.GetDisplayBounds(n)
@@ -100,7 +104,7 @@ func streamDisplay(ctx context.Context, n int, framerate int, out *mjpeg.Stream)
 			lastBounds = newBounds
 			imgBuf = image.NewRGBA(lastBounds)
 		}
-		err = CaptureImg(imgBuf, int(x), int(y), int(hw), int(hh))
+		err = forkscreenshot.CaptureImg(imgBuf, int(x), int(y), int(hw), int(hh))
 		if err != nil {
 			fmt.Printf("Err CaptureImg: %v\n", err)
 			continue
@@ -126,8 +130,8 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Str
 
 	// Make thread PerMonitorV2 Dpi aware if supported on OS
 	// allows to let windows handle BGRA -> RGBA conversion and possibly more things
-	if isValidDpiAwarenessContext(DpiAwarenessContextPerMonitorAwareV2) {
-		_, err := setThreadDpiAwarenessContext(DpiAwarenessContextPerMonitorAwareV2)
+	if win.IsValidDpiAwarenessContext(win.DpiAwarenessContextPerMonitorAwareV2) {
+		_, err := win.SetThreadDpiAwarenessContext(win.DpiAwarenessContextPerMonitorAwareV2)
 		if err != nil {
 			fmt.Printf("Could not set thread DPI awareness to PerMonitorAwareV2. %v\n", err)
 		} else {
@@ -153,8 +157,8 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Str
 	}()
 
 	buf := &bufferFlusher{Buffer: bytes.Buffer{}}
-	opts := jpegQuality(75)
-	limiter := newFrameLimiter(framerate)
+	opts := jpegQuality(50)
+	limiter := NewFrameLimiter(framerate)
 	// Create image that can contain the wanted output (desktop)
 	finalBounds := screenshot.GetDisplayBounds(n)
 	imgBuf := image.NewRGBA(finalBounds)
@@ -202,7 +206,10 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Str
 			continue
 		}
 		buf.Reset()
-		encodeJpeg(buf, imgBuf, opts)
+		resized := resize.Resize(1920, 1080, imgBuf, resize.Bilinear)
+		encodeJpeg(buf, resized, opts)
+
+		// encodeJpeg(buf, imgBuf, opts)
 		out.Update(buf.Bytes())
 	}
 }
@@ -214,62 +221,3 @@ type bufferFlusher struct {
 }
 
 func (*bufferFlusher) Flush() error { return nil }
-
-// finer granularity for sleeping
-type frameLimiter struct {
-	DesiredFps  int
-	frameTimeNs int64
-
-	LastFrameTime     time.Time
-	LastSleepDuration time.Duration
-
-	DidSleep bool
-	DidSpin  bool
-}
-
-func newFrameLimiter(desiredFps int) *frameLimiter {
-	return &frameLimiter{
-		DesiredFps:    desiredFps,
-		frameTimeNs:   (time.Second / time.Duration(desiredFps)).Nanoseconds(),
-		LastFrameTime: time.Now(),
-	}
-}
-
-func (l *frameLimiter) Wait() {
-	l.DidSleep = false
-	l.DidSpin = false
-
-	now := time.Now()
-	spinWaitUntil := now
-
-	sleepTime := l.frameTimeNs - now.Sub(l.LastFrameTime).Nanoseconds()
-
-	if sleepTime > int64(1*time.Millisecond) {
-		if sleepTime < int64(30*time.Millisecond) {
-			l.LastSleepDuration = time.Duration(sleepTime / 8)
-		} else {
-			l.LastSleepDuration = time.Duration(sleepTime / 4 * 3)
-		}
-		time.Sleep(time.Duration(l.LastSleepDuration))
-		l.DidSleep = true
-
-		newNow := time.Now()
-		spinWaitUntil = newNow.Add(time.Duration(sleepTime) - newNow.Sub(now))
-		now = newNow
-
-		for spinWaitUntil.After(now) {
-			now = time.Now()
-			// SPIN WAIT
-			l.DidSpin = true
-		}
-	} else {
-		l.LastSleepDuration = 0
-		spinWaitUntil = now.Add(time.Duration(sleepTime))
-		for spinWaitUntil.After(now) {
-			now = time.Now()
-			// SPIN WAIT
-			l.DidSpin = true
-		}
-	}
-	l.LastFrameTime = time.Now()
-}

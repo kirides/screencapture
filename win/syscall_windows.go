@@ -1,4 +1,4 @@
-package main
+package win
 
 //go:generate mkwinsyscall -output zsyscall_windows.go syscall_windows.go
 
@@ -51,9 +51,9 @@ const (
 	OBJ_BITMAP = 7
 )
 
-//sys	getDesktopWindow() (h HWND) = User32.GetDesktopWindow
-//sys	getDIBits(hdc syscall.Handle, hbmp syscall.Handle, uStartScan uint32, cScanLines uint32, lpvBits *byte, lpbi *BITMAPINFO, uUsage uint32) (v int32, err error) = Gdi32.GetDIBits
-//sys	getCurrentObject(hdc syscall.Handle, typ uint16) (h syscall.Handle) = Gdi32.GetCurrentObject
+//sys	GetDesktopWindow() (h HWND) = User32.GetDesktopWindow
+//sys	GetDIBits(hdc syscall.Handle, hbmp syscall.Handle, uStartScan uint32, cScanLines uint32, lpvBits *byte, lpbi *BITMAPINFO, uUsage uint32) (v int32, err error) = Gdi32.GetDIBits
+//sys	GetCurrentObject(hdc syscall.Handle, typ uint16) (h syscall.Handle) = Gdi32.GetCurrentObject
 
 //sys	setWindowsHookExW(idHook int32, lpfn unsafe.Pointer, hmod syscall.Handle, dwThreadId uint32) (h syscall.Handle, err error) = User32.SetWindowsHookExW
 
@@ -69,9 +69,9 @@ const (
 //sys	AddClipboardFormatListener(hWnd syscall.Handle) (err error) = User32.AddClipboardFormatListener
 //sys	RemoveClipboardFormatListener(hWnd syscall.Handle) (err error) = User32.RemoveClipboardFormatListener
 
-//sys	getProcessHeap() (hHeap syscall.Handle, err error) = Kernel32.GetProcessHeap
-//sys	heapAlloc(hHeap syscall.Handle, dwFlags uint32, dwSize uintptr) (lpMem uintptr, err error) = Kernel32.HeapAlloc
-//sys	heapFree(hHeap syscall.Handle, dwFlags uint32, lpMem uintptr) (err error) = Kernel32.HeapFree
+//sys	GetProcessHeap() (hHeap syscall.Handle, err error) = Kernel32.GetProcessHeap
+//sys	HeapAlloc(hHeap syscall.Handle, dwFlags uint32, dwSize uintptr) (lpMem uintptr, err error) = Kernel32.HeapAlloc
+//sys	HeapFree(hHeap syscall.Handle, dwFlags uint32, lpMem uintptr) (err error) = Kernel32.HeapFree
 //sys	heapSize(hHeap syscall.Handle, dwFlags uint32, lpMem uintptr) (size uintptr, err error) [failretval==^uintptr(r0)] = Kernel32.HeapSize
 
 //sys	dragQueryFile(hDrop syscall.Handle, iFile int, buf *uint16, len uint32) (n int, err error) = Shell32.DragQueryFileW
@@ -85,5 +85,5 @@ const (
 	DpiAwarenessContextUnawareGdiScaled  = -5
 )
 
-//sys	setThreadDpiAwarenessContext(value int32) (n int, err error) = User32.SetThreadDpiAwarenessContext
-//sys	isValidDpiAwarenessContext(value int32) (n bool) = User32.IsValidDpiAwarenessContext
+//sys	SetThreadDpiAwarenessContext(value int32) (n int, err error) = User32.SetThreadDpiAwarenessContext
+//sys	IsValidDpiAwarenessContext(value int32) (n bool) = User32.IsValidDpiAwarenessContext

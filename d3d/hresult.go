@@ -13,6 +13,10 @@ import (
 
 type HRESULT uint32
 
+func failed(hr int32) bool {
+	return hr < 0
+}
+
 const (
 	S_OK                                     HRESULT = 0x0
 	E_INVALIDARG                             HRESULT = 0x80070057

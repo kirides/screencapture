@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"screen-share/swizzle"
+
 	"unsafe"
+
+	"github.com/kirides/screencapture/swizzle"
 )
 
 type OutputDuplicator struct {

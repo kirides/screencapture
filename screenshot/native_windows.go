@@ -1,13 +1,16 @@
-package main
+package screenshot
 
 import (
 	"errors"
 	"image"
-	"screen-share/swizzle"
 	"syscall"
 	"unsafe"
 
+	"github.com/kirides/screencapture/swizzle"
+
 	"github.com/lxn/win"
+
+	thiswin "github.com/kirides/screencapture/win"
 )
 
 func CaptureImg(img *image.RGBA, x, y, width, height int) error {
@@ -16,7 +19,7 @@ func CaptureImg(img *image.RGBA, x, y, width, height int) error {
 
 // code is mostly from github.com/kbinani/screenshot
 func captureImg(img *image.RGBA, x, y, width, height int) error {
-	hWnd := syscall.Handle(getDesktopWindow())
+	hWnd := syscall.Handle(thiswin.GetDesktopWindow())
 	hdc := win.GetDC(win.HWND(hWnd))
 	if hdc == 0 {
 		return errors.New("GetDC failed")
@@ -47,7 +50,7 @@ func captureImg(img *image.RGBA, x, y, width, height int) error {
 	var bm win.BITMAP
 	win.GetObject(win.HGDIOBJ(bitmap), unsafe.Sizeof(win.BITMAP{}), unsafe.Pointer(&bm))
 
-	var header BITMAPINFOHEADER
+	var header thiswin.BITMAPINFOHEADER
 	header.BiSize = uint32(unsafe.Sizeof(header))
 	header.BiPlanes = 1
 	header.BiBitCount = 32
@@ -58,11 +61,11 @@ func captureImg(img *image.RGBA, x, y, width, height int) error {
 	// GetDIBits balks at using Go memory on some systems.
 	bitmapDataSize := int32(((int64(bm.BmWidth)*int64(header.BiBitCount) + 31) / 32) * 4 * int64(bm.BmHeight))
 
-	hHeap, _ := getProcessHeap()
-	hMem, _ := heapAlloc(hHeap, 0, uintptr(bitmapDataSize))
-	defer heapFree(hHeap, 0, hMem)
+	hHeap, _ := thiswin.GetProcessHeap()
+	hMem, _ := thiswin.HeapAlloc(hHeap, 0, uintptr(bitmapDataSize))
+	defer thiswin.HeapFree(hHeap, 0, hMem)
 
-	if v, _ := getDIBits(syscall.Handle(hdc), syscall.Handle(bitmap), 0, uint32(height), (*uint8)(unsafe.Pointer(hMem)), (*BITMAPINFO)(unsafe.Pointer(&header)), win.DIB_RGB_COLORS); v == 0 {
+	if v, _ := thiswin.GetDIBits(syscall.Handle(hdc), syscall.Handle(bitmap), 0, uint32(height), (*uint8)(unsafe.Pointer(hMem)), (*thiswin.BITMAPINFO)(unsafe.Pointer(&header)), win.DIB_RGB_COLORS); v == 0 {
 		return errors.New("GetDIBits failed")
 	}
 
