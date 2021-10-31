@@ -164,6 +164,9 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Str
 	imgBuf := image.NewRGBA(finalBounds)
 	lastBounds := finalBounds
 
+	// TODO: This is just there, so that people can see how resizing might look
+	_ = resize.Resize(1920, 1080, imgBuf, resize.Bicubic)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -206,10 +209,7 @@ func streamDisplayDXGI(ctx context.Context, n int, framerate int, out *mjpeg.Str
 			continue
 		}
 		buf.Reset()
-		resized := resize.Resize(1920, 1080, imgBuf, resize.Bilinear)
-		encodeJpeg(buf, resized, opts)
-
-		// encodeJpeg(buf, imgBuf, opts)
+		encodeJpeg(buf, imgBuf, opts)
 		out.Update(buf.Bytes())
 	}
 }
