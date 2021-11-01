@@ -495,6 +495,30 @@ func (obj *IDXGIOutputDuplication) GetFrameDirtyRects(buffer []RECT, rectsRequir
 	*rectsRequired = *rectsRequired / 16
 	return int32(ret)
 }
+
+func (obj *IDXGIOutputDuplication) GetFramePointerShape(pointerShapeBufferSize uint32,
+	pPointerShapeBuffer []byte,
+	pPointerShapeBufferSizeRequired *uint32,
+	pPointerShapeInfo *_DXGI_OUTDUPL_POINTER_SHAPE_INFO) int32 {
+
+	var buf *byte
+	if len(pPointerShapeBuffer) > 0 {
+		buf = &pPointerShapeBuffer[0]
+	}
+
+	ret, _, _ := syscall.Syscall6(
+		obj.vtbl.GetFramePointerShape,
+		5,
+		uintptr(unsafe.Pointer(obj)),
+		uintptr(pointerShapeBufferSize),
+		uintptr(unsafe.Pointer(buf)),
+		uintptr(unsafe.Pointer(pPointerShapeBufferSizeRequired)),
+		uintptr(unsafe.Pointer(pPointerShapeInfo)),
+		0,
+	)
+
+	return int32(ret)
+}
 func (obj *IDXGIOutputDuplication) GetDesc(desc *_DXGI_OUTDUPL_DESC) int32 {
 	ret, _, _ := syscall.Syscall(
 		obj.vtbl.GetDesc,
