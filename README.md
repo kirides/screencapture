@@ -1,5 +1,7 @@
 # Screencapture
 
+This repository has been moved to https://github.com/kirides/go-d3d
+
 ## Motivation
 
 I wanted to learn more about `COM` interop with Go and create a somewhat usable screen sharing tool
